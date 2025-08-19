@@ -7,7 +7,19 @@ if (-not (Test-Path ".\db_dump\db_export.sql")) {
 # Obtener la contraseña del archivo .env
 $ROOT_PASSWORD = (Get-Content .\.env | Select-String MYSQL_ROOT_PASSWORD).ToString().Split('=')[1]
 
-# Importar la base de datos usando mysql
-Get-Content .\db_dump\db_export.sql | docker-compose exec -T db mysql -u root -p"$ROOT_PASSWORD" wordpress
+# Verificar si los contenedores están corriendo
+$running = docker-compose ps --status running
+if (-not $running) {
+    Write-Host "Error: Los contenedores no están ejecutándose. Iniciando contenedores..."
+    docker-compose up -d
+    Start-Sleep -Seconds 10 # Esperar a que los servicios inicien
+}
 
-Write-Host "Base de datos importada exitosamente"
+# Importar la base de datos usando mysql
+Get-Content .\db_dump\db_export.sql | docker-compose exec -T database mysql -u root -p"$ROOT_PASSWORD" wordpress
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "Base de datos importada exitosamente"
+} else {
+    Write-Host "Error: No se pudo importar la base de datos"
+}
